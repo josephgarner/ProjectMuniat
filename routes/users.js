@@ -9,11 +9,11 @@ var router = express.Router();
 var arr_Files = []
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly'];
+const SCOPES = ['https://www.googleapis.com/auth/drive'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
-const TOKEN_PATH = '../credentials.json';
+const TOKEN_PATH = 'token.json';
 
 // Load client secrets from a local file.
 fs.readFile('credentials.json', (err, content) => {
@@ -66,38 +66,33 @@ function getAccessToken(oAuth2Client, callback) {
     });
 }
 
-router.get('/', function (req, res, next) {
-    const drive = google.drive({
-        version: 'v3',
-        auth
-    });
+function listFiles(auth) {
+    const drive = google.drive({version: 'v3', auth});
     drive.files.list({
-        pageSize: 10,
-        fields: 'nextPageToken, files(id, name)',
+      pageSize: 10,
+      fields: 'nextPageToken, files(id, name)',
     }, (err, res) => {
-        if (err) return console.log('The API returned an error: ' + err);
-        const files = res.data.files;
-        if (files.length) {
-            console.log('Files:');
-            files.map((file) => {
-                arr_Files.push({
-                    id: file.id,
-                    filename: file.name
-                });
+      if (err) return console.log('The API returned an error: ' + err);
+      const files = res.data.files;
+      if (files.length) {
+        console.log('Files:');
+        files.map((file) => {
+            arr_Files.push({
+                id: file.id,
+                filename: file.name
             });
-            res.json = JSON.stringify(arr_Files);
-        } else {
-            res.json([{
-                id: 1,
-                filename: "No Files could be found"
-            }]);
-        }
+        });
+      } else {
+        arr_Files.push({
+            id: 1,
+            filename: "No Files could be found"
+        });
+      }
     });
+  }
 
-
-
-
-
+router.get('/', function (req, res, next) {
+    res.json = JSON.stringify(arr_Files);
 });
 
 module.exports = router;
