@@ -1,5 +1,6 @@
 #custom
 credentials.json
+token.json
 
 # dependencies
 /node_modules

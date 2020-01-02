@@ -4,14 +4,15 @@ class App extends Component {
   state = {files: []}
 
   componentDidMount() {
-    fetch('/users')
-      .then(res => res.json())
-      .then(files => this.setState({ files }))
-      .then();
-    console.log(this.state);
+    fetch('http://localhost:3001/drive')
+      .then(response => response.json())
+      .then(responseJson =>{
+        this.setState({ files:JSON.parse(responseJson.data) });
+      });
   }
 
   render() {
+    console.log(this.state);
     return (
       <div className="App">
         <h1>Files</h1>

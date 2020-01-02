@@ -16,11 +16,7 @@ const SCOPES = ['https://www.googleapis.com/auth/drive'];
 const TOKEN_PATH = 'token.json';
 
 // Load client secrets from a local file.
-fs.readFile('credentials.json', (err, content) => {
-    if (err) return console.log('Error loading client secret file:', err);
-    // Authorize a client with credentials, then call the Google Drive API.
-    authorize(JSON.parse(content), listFiles);
-});
+
 
 function authorize(credentials, callback) {
     const {
@@ -67,32 +63,45 @@ function getAccessToken(oAuth2Client, callback) {
 }
 
 function listFiles(auth) {
-    const drive = google.drive({version: 'v3', auth});
-    drive.files.list({
-      pageSize: 10,
-      fields: 'nextPageToken, files(id, name)',
-    }, (err, res) => {
-      if (err) return console.log('The API returned an error: ' + err);
-      const files = res.data.files;
-      if (files.length) {
-        console.log('Files:');
-        files.map((file) => {
-            arr_Files.push({
-                id: file.id,
-                filename: file.name
-            });
-        });
-      } else {
-        arr_Files.push({
-            id: 1,
-            filename: "No Files could be found"
-        });
-      }
+    const drive = google.drive({
+        version: 'v3',
+        auth
     });
-  }
+    drive.files.list({
+        q: "mimeType='text/plain'",
+        pageSize: 1000,
+        fields: 'nextPageToken, files(id, name)',
+    }, (err, res) => {
+        if (err) return console.log('The API returned an error: ' + err);
+        const files = res.data.files;
+        if (files.length) {
+            arr_Files = [];
+            console.log('Loading Files');
+            files.map((file) => {
+                arr_Files.push({
+                    id: file.id,
+                    filename: file.name
+                });
+            });
+            console.log("Complete");
+        } else {
+            arr_Files.push({
+                id: 1,
+                filename: "No Files could be found"
+            });
+        };
+    });
+}
 
 router.get('/', function (req, res, next) {
-    res.json = JSON.stringify(arr_Files);
+    fs.readFile('credentials.json', (err, content) => {
+        if (err) return console.log('Error loading client secret file:', err);
+        // Authorize a client with credentials, then call the Google Drive API.
+        authorize(JSON.parse(content), listFiles);
+    });
+    res.status(200).json({
+        data: JSON.stringify(arr_Files)
+    });
 });
 
 module.exports = router;
