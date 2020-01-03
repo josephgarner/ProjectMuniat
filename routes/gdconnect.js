@@ -1,13 +1,19 @@
 const fs = require('fs');
 const readline = require('readline');
+const express = require('express');
+const async = require('async');
 const {
     google
 } = require('googleapis');
 
-var express = require('express');
-var router = express.Router();
-var arr_Files = []
+const searchFile = {
+    id = null,
+    name = null
+}
 
+const router = express.Router();
+var arr_Files;
+var index;
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/drive'];
 // The file token.json stores the user's access and refresh tokens, and is
@@ -67,40 +73,67 @@ function listFiles(auth) {
         version: 'v3',
         auth
     });
-    drive.files.list({
-        q: "mimeType='text/plain'",
-        pageSize: 1000,
-        fields: 'nextPageToken, files(id, name)',
-    }, (err, res) => {
-        if (err) return console.log('The API returned an error: ' + err);
-        const files = res.data.files;
-        if (files.length) {
-            arr_Files = [];
-            console.log('Loading Files');
-            files.map((file) => {
-                arr_Files.push({
-                    id: file.id,
-                    filename: file.name
+    arr_Files = [];
+    index = 0;
+    loopingHardstyle(null);
+    function loopingHardstyle(page){
+        drive.files.list({
+            pageToken: page,
+            q: "mimeType='text/plain'",
+            pageSize: 100,
+            fields: 'nextPageToken, files(id, name)',
+        }, (err, res) => {
+            if(err){    
+                console.error(err);
+                return err;
+            }
+            else{
+                console.log("Loading page: "+index);
+                res.data.files.map((file) =>{
+                    arr_Files.push({
+                        id: file.id,
+                        index: index,
+                        filename: file.name
+                    });
+                    index++;
                 });
-            });
-            console.log("Complete");
-        } else {
-            arr_Files.push({
-                id: 1,
-                filename: "No Files could be found"
-            });
-        };
-    });
+                if(res.data.nextPageToken != undefined){
+                    pageToken = res.data.nextPageToken;
+                    loopingHardstyle(pageToken);
+                }
+                else{
+                    return;
+                }
+            }
+        });
+    }
+
 }
 
 router.get('/', function (req, res, next) {
-    fs.readFile('credentials.json', (err, content) => {
-        if (err) return console.log('Error loading client secret file:', err);
-        // Authorize a client with credentials, then call the Google Drive API.
-        authorize(JSON.parse(content), listFiles);
-    });
+    if(arr_Files == null || arr_Files.length == 0){
+        fs.readFile('credentials.json', (err, content) => {
+            if (err) return console.log('Error loading client secret file:', err);
+            // Authorize a client with credentials, then call the Google Drive API.
+            authorize(JSON.parse(content), listFiles);
+        });
+    }
     res.status(200).json({
         data: JSON.stringify(arr_Files)
+    });
+});
+
+router.post('/search',function(req,res){
+    searchFile.id = req.body.id;
+    searchFile.name = req.body.name;
+});
+
+router.get('/searchResult', function (req, res, next) {
+    
+    res.status(200).json({
+        data: [
+            { id: searchFile.id, name: searchFile.name}
+        ]
     });
 });
 
